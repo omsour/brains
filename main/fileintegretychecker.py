@@ -10,8 +10,8 @@ def get_file_checksum(file_path):
         hasher.update(buf)
     return hasher.hexdigest()
 
-def check_file(file_path):
-    """Check file existence, type, permissions, and attempt to load it."""
+def check_npz_file(file_path):
+    """Check and load .npz file."""
     # Check if the file exists
     if not os.path.exists(file_path):
         raise FileNotFoundError(f"File not found: {file_path}")
@@ -38,11 +38,46 @@ def check_file(file_path):
     except Exception as e:
         print(f"Error loading .npz file: {e}")
 
-if __name__ == "__main__":
-    file_path = "main/mainSamplingData/postprocessed_data.npz"
+def check_dat_file(file_path):
+    """Check .dat file existence, permissions, and checksum."""
+    # Check if the file exists
+    if not os.path.exists(file_path):
+        raise FileNotFoundError(f"File not found: {file_path}")
 
-    # Check the file
-    try:
-        check_file(file_path)
-    except Exception as e:
-        print(f"An error occurred: {e}")
+    # Check if the file is a .dat file
+    if not file_path.endswith('.dat'):
+        raise ValueError(f"File is not a .dat file: {file_path}")
+
+    # Check file permissions
+    if not os.access(file_path, os.R_OK):
+        raise PermissionError(f"File is not readable: {file_path}")
+
+    # Compute and print file checksum
+    checksum = get_file_checksum(file_path)
+    print(f"File checksum: {checksum}")
+
+    print(f".dat file '{file_path}' is verified.")
+
+def check_file(file_path):
+    """Check file based on its extension."""
+    if file_path.endswith('.npz'):
+        check_npz_file(file_path)
+    elif file_path.endswith('.dat'):
+        check_dat_file(file_path)
+    else:
+        raise ValueError(f"Unsupported file type: {file_path}")
+
+if __name__ == "__main__":
+    # List of files to check
+    files_to_check = [
+        "main/mainSamplingData/postprocessing_data.npz",
+        "main/mainSamplingData/another_file.dat"
+    ]
+
+    # Check each file
+    for file_path in files_to_check:
+        print(f"\nChecking file: {file_path}")
+        try:
+            check_file(file_path)
+        except Exception as e:
+            print(f"An error occurred: {e}")
