@@ -318,6 +318,7 @@ def train_loop(
     min_val_loss = np.inf
 
     for epoch in range(epochs):
+        clear_cuda_cache()
         print("\nEpoch: " + str(epoch))
         model, running_loss = default_train_step(model, dataloaders[0],
                                                  criterion, optimizer)
@@ -581,5 +582,9 @@ def to_device(inputs: torch.Tensor) -> torch.Tensor:
         Input tensor allocated to GPU device.
     """
     if inputs.device != TorchUtils.get_device():
-        inputs = inputs.to(device=TorchUtils.get_device()).float()
+        inputs = inputs.to(device=TorchUtils.get_device(), non_blocking=True).float()
     return inputs
+
+def clear_cuda_cache():
+    torch.cuda.empty_cache()
+    torch.cuda.reset_peak_memory_stats()

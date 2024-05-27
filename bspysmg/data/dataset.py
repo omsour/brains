@@ -9,7 +9,7 @@ from brainspy.utils.pytorch import TorchUtils
 from typing import Tuple, List
 import matplotlib.pyplot as plt
 from torch.utils.data import Subset
-
+from bspysmg.data.streaming import StreamingModelDataset
 class ModelDataset(Dataset):
     def __init__(self, filename: str, steps: int = 1) -> None:
         """
@@ -367,12 +367,13 @@ def get_dataloaders(
     amplification = None
     dataset_names = ['train', 'validation', 'test']
 
+    sequence_length = configs['model_structure']['sequence_length']
+    steps = configs['data']['steps']
 
     if len(configs['data']['dataset_paths']) > 1:
-        for i in range(len(configs['data']['dataset_paths'])):
-            if configs['data']['dataset_paths'][i] is not None:
-                dataset = ModelDataset(configs['data']['dataset_paths'][i],
-                                       steps=configs['data']['steps'])
+         for i, path in enumerate(configs['data']['dataset_paths']):
+            if path is not None:
+                dataset = StreamingModelDataset(path, steps=steps, sequence_length=sequence_length)
 
                 if i > 0:
                     amplification_aux = TorchUtils.format(
@@ -391,63 +392,18 @@ def get_dataloaders(
                 datasets.append(dataset)
 
     else:
-        dataset = ModelDataset(configs['data']['dataset_paths'][0],
-                               steps=configs['data']['steps'])
+        dataset = StreamingModelDataset(configs['data']['dataset_paths'][0], steps=steps, sequence_length=sequence_length)
         info_dict = get_info_dict(configs, dataset.sampling_configs)
         amplification = TorchUtils.format(
             info_dict["sampling_configs"]["driver"]["amplification"])
-        datasets = split_dataset_seq(dataset, configs['data']['split_percentages'])
-
-    
-    if info_dict['model_structure']['type'] == 'LSTM':
-        sequence_length = info_dict['model_structure']['sequence_length']
-        chunk_size = max(configs['data']['batch_size'], sequence_length)  # Ensure chunk size is at least sequence_length
-        for i, dataset in enumerate(datasets):
-            if dataset is not None:
-                total_samples = len(dataset)
-                input_sequences, target_values = [], []
-
-                # Initialize buffer to handle sequence spanning across chunks
-                buffer_data = []
-
-                for start_idx in range(0, total_samples, chunk_size):
-                    end_idx = min(start_idx + chunk_size, total_samples)
-                    chunk_data = buffer_data  # Start with any leftover data from previous chunk
-
-                    # Collect data for the current chunk
-                    for j in range(start_idx, end_idx):
-                        sample, target = dataset[j]
-                        sample = sample.cpu().numpy() if sample.is_cuda else sample.numpy()
-                        target = target.cpu().numpy() if target.is_cuda else target.numpy()
-                        chunk_data.append(np.hstack((sample, target)))
-
-                    chunk_data = np.array(chunk_data)
-
-                    # Prepare sequences within the current chunk
-                    X, y = prepare_rnn_sequences(chunk_data, sequence_length)
-
-                    input_sequences.extend(X)
-                    target_values.extend(y)
-
-                    # Save the last 'sequence_length' data points to the buffer for the next chunk
-                    buffer_data = chunk_data[-sequence_length + 1:].tolist()
-
-                # Ensure any remaining data in the buffer is processed
-                if len(buffer_data) >= sequence_length:
-                    buffer_data = np.array(buffer_data)
-                    X, y = prepare_rnn_sequences(buffer_data, sequence_length)
-                    input_sequences.extend(X)
-                    target_values.extend(y)
-
-                datasets[i] = [(x, y_) for x, y_ in zip(input_sequences, target_values)]
 
     # Create dataloaders
     dataloaders = []
     shuffle = [False, False, False]
-    for i in range(len(datasets)):
-        if datasets[i] is not None and len(datasets[i]) != 0:
+    for i, dataset in enumerate(datasets):
+        if dataset is not None:
             dl = DataLoader(
-                dataset=datasets[i],
+                dataset=dataset,
                 batch_size=configs["data"]["batch_size"],
                 num_workers=configs["data"]["worker_no"],
                 pin_memory=configs["data"]["pin_memory"],

@@ -10,10 +10,12 @@ from bspysmg.model.training import generate_surrogate_model
 from brainspy.utils.io import load_configs
 from bspysmg.data.postprocess import post_process
 from bspysmg.model.lstm import LSTMModel
+from bspysmg.data.datasplitter import DataSplitter
 
 #inputs, outputs, info_dictionary = post_process('main\mainSamplingDataFull', clipping_value=None)
 #print(f"max out {outputs.max()} max min {outputs.min()} shape {outputs.shape}")
-      
+ 
+
 """
 # Define the base directory for saving YAML files
 results_base_dir = "main/mainTrainingData_HyperTuning"
@@ -84,5 +86,9 @@ for file_name in os.listdir('configs/training/Tuning'):
         print(f"Processed: {file_path}")
 """
 
-smg_configs = load_configs('configs/training/smg_configs_template_omar.yaml')
+smg_configs = load_configs('configs/fulltraining/smg_configs_template_omar.yaml')
+
+splitter = DataSplitter("main/mainSamplingDataFull/postprocessed_data.npz",smg_configs['data']['split_percentages'])
+splitter.split_and_save()
+
 generate_surrogate_model(smg_configs, custom_model=LSTMModel)
