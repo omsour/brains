@@ -70,8 +70,9 @@ def check_file(file_path):
 if __name__ == "__main__":
     # List of files to check
     files_to_check = [
-        "main/mainSamplingData/postprocessing_data.npz",
-        "main/mainSamplingData/another_file.dat"
+        "main/mainSamplingDataFull/IO.dat",
+        "main/mainSamplingDataFull/postprocessed_data.npz"
+        
     ]
 
     # Check each file

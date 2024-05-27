@@ -88,7 +88,7 @@ for file_name in os.listdir('configs/training/Tuning'):
 
 smg_configs = load_configs('configs/fulltraining/smg_configs_template_omar.yaml')
 
-splitter = DataSplitter("main/mainSamplingDataFull/postprocessed_data.npz",smg_configs['data']['split_percentages'])
+splitter = DataSplitter("main/mainSamplingData/postprocessed_data.npz",smg_configs['data']['split_percentages'])
 splitter.split_and_save()
 
 generate_surrogate_model(smg_configs, custom_model=LSTMModel)
